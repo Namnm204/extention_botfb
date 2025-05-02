@@ -58,11 +58,37 @@ document.addEventListener("DOMContentLoaded", () => {
           anchor.click();
 
           setTimeout(() => {
-            const infoSection = Array.from(document.querySelectorAll("div"))
+            const acceptedLocations = ["Hà Nội"];
+            const allDivText = Array.from(document.querySelectorAll("div"))
               .map((div) => div.innerText)
-              .find((text) => text && text.includes("Sống tại"));
+              .filter(Boolean)
+              .join(" ");
 
-            if (infoSection && infoSection.includes("Hà Nội")) {
+            const hasValidLocation = acceptedLocations.some(
+              (loc) =>
+                allDivText.includes(`Sống tại ${loc}`) ||
+                allDivText.includes(`Đến từ ${loc}`)
+            );
+
+            // Lấy số bạn bè
+            let friendCount = 0;
+            const friendText = [...document.querySelectorAll("span")]
+              .map((el) => el.innerText)
+              .find((text) => /\d+([.,]\d+)?[Kk]? người bạn/.test(text));
+
+            if (friendText) {
+              const match = friendText.match(/(\d+[.,]?\d*)([Kk]?)/);
+              if (match) {
+                let number = match[1].replace(",", ".");
+                friendCount = parseFloat(number);
+                if (match[2].toLowerCase() === "k") {
+                  friendCount *= 1000;
+                }
+                friendCount = Math.round(friendCount);
+              }
+            }
+
+            if (hasValidLocation && friendCount >= 500) {
               nextButton.click();
               count++;
               chrome.runtime.sendMessage({ name, url: profileLink, count });
@@ -75,7 +101,9 @@ document.addEventListener("DOMContentLoaded", () => {
               chrome.runtime.sendMessage({
                 skipped: true,
                 name,
-                reason: "Không sống tại Hà Nội hoặc không có thông tin vị trí",
+                reason: `Bị loại: ${hasValidLocation ? "" : "Không ở Hà Nội"} ${
+                  friendCount < 500 ? "- Dưới 500 bạn" : ""
+                }`.trim(),
               });
 
               setTimeout(() => {
@@ -83,7 +111,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 setTimeout(clickNext, delay + 1000);
               }, 1000);
             }
-          }, 3000); // đợi trang cá nhân load
+          }, 3000); // Đợi trang cá nhân load
         };
 
         clickNext();
