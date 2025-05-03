@@ -1,8 +1,14 @@
 let isRunning = false;
 let logBox = null;
+let sentCount = 0;
+let skippedCount = 0;
+let sentCountDisplay = null;
+let skippedCountDisplay = null;
 
 document.addEventListener("DOMContentLoaded", () => {
   logBox = document.getElementById("log");
+  sentCountDisplay = document.getElementById("sent-count");
+  skippedCountDisplay = document.getElementById("skipped-count");
 
   document.getElementById("start").addEventListener("click", async () => {
     const selectedLimit = document.querySelector('input[name="limit"]:checked');
@@ -10,11 +16,22 @@ document.addEventListener("DOMContentLoaded", () => {
       log("⚠️ Vui lòng chọn ngưỡng gửi.");
       return;
     }
+
     const limit =
       selectedLimit.value === "Infinity"
         ? Infinity
         : parseInt(selectedLimit.value);
     const delay = parseFloat(document.getElementById("delay").value) * 1000;
+    const locations = document
+      .getElementById("locations")
+      .value.split(",")
+      .map((l) => l.trim().toLowerCase())
+      .filter(Boolean);
+
+    sentCount = 0;
+    skippedCount = 0;
+    updateCounts();
+
     isRunning = true;
     log("⏳ Đang bắt đầu...");
 
@@ -22,11 +39,30 @@ document.addEventListener("DOMContentLoaded", () => {
 
     chrome.scripting.executeScript({
       target: { tabId: tab.id },
-      args: [limit, delay],
-      func: (limit, delay) => {
+      args: [limit, delay, locations],
+      func: (limit, delay, locations) => {
         window.autoAddFriendRunning = true;
         let count = 0;
         const processed = new Set();
+
+        const scrollAndHighlight = (anchor) => {
+          const container = document.querySelector('[role="main"]');
+          if (anchor && container) {
+            anchor.scrollIntoView({ behavior: "smooth", block: "center" });
+            anchor.style.outline = "3px dashed red";
+            anchor.style.transition = "outline 0.3s ease-in-out";
+            let blinkCount = 0;
+            const blink = setInterval(() => {
+              anchor.style.outline =
+                blinkCount % 2 === 0 ? "3px dashed red" : "none";
+              blinkCount++;
+              if (blinkCount > 5) {
+                clearInterval(blink);
+                anchor.style.outline = "none";
+              }
+            }, 400);
+          }
+        };
 
         const clickNext = () => {
           if (!window.autoAddFriendRunning || count >= limit) {
@@ -53,24 +89,24 @@ document.addEventListener("DOMContentLoaded", () => {
           const anchor = nextButton.closest("a");
           const profileLink = anchor.href;
           const name = anchor?.innerText?.trim().split("\n")[0] || "Không rõ";
+          scrollAndHighlight(anchor);
           processed.add(profileLink);
-
           anchor.click();
 
           setTimeout(() => {
-            const acceptedLocations = ["Hà Nội"];
             const allDivText = Array.from(document.querySelectorAll("div"))
               .map((div) => div.innerText)
               .filter(Boolean)
-              .join(" ");
+              .join(" ")
+              .toLowerCase();
 
-            const hasValidLocation = acceptedLocations.some(
+            const hasValidLocation = locations.some(
               (loc) =>
-                allDivText.includes(`Sống tại ${loc}`) ||
-                allDivText.includes(`Đến từ ${loc}`)
+                allDivText.includes(`sống tại ${loc}`) ||
+                allDivText.includes(`đến từ ${loc}`) ||
+                allDivText.includes(loc)
             );
 
-            // Lấy số bạn bè
             let friendCount = 0;
             const friendText = [...document.querySelectorAll("span")]
               .map((el) => el.innerText)
@@ -101,9 +137,9 @@ document.addEventListener("DOMContentLoaded", () => {
               chrome.runtime.sendMessage({
                 skipped: true,
                 name,
-                reason: `Bị loại: ${hasValidLocation ? "" : "Không ở Hà Nội"} ${
-                  friendCount < 500 ? "- Dưới 500 bạn" : ""
-                }`.trim(),
+                reason: `Bị loại: ${
+                  hasValidLocation ? "" : "Không ở khu vực hợp lệ"
+                } ${friendCount < 500 ? "- Dưới 500 bạn" : ""}`.trim(),
               });
 
               setTimeout(() => {
@@ -111,7 +147,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 setTimeout(clickNext, delay + 1000);
               }, 1000);
             }
-          }, 3000); // Đợi trang cá nhân load
+          }, 2000);
         };
 
         clickNext();
@@ -139,14 +175,27 @@ function log(message) {
   logBox.scrollTop = logBox.scrollHeight;
 }
 
+function updateCounts() {
+  if (sentCountDisplay) {
+    sentCountDisplay.textContent = `Tổng số lời mời đã gửi: ${sentCount}`;
+  }
+  if (skippedCountDisplay) {
+    skippedCountDisplay.textContent = `Tổng số người bị loại: ${skippedCount}`;
+  }
+}
+
 chrome.runtime.onMessage.addListener((message) => {
   if (message.done) {
     log("✅ Đã hoàn thành gửi lời mời.");
   } else if (message.name && message.url) {
+    sentCount++;
+    updateCounts();
     log(
       `✅ Đã gửi lời mời kết bạn cho <a href="${message.url}" target="_blank">${message.name}</a>`
     );
   } else if (message.skipped) {
+    skippedCount++;
+    updateCounts();
     log(`⚠️ Bỏ qua ${message.name}: ${message.reason}`);
   }
 });
