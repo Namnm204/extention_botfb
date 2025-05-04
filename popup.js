@@ -82,7 +82,8 @@ document.addEventListener("DOMContentLoaded", () => {
           });
 
           if (!nextButton) {
-            chrome.runtime.sendMessage({ done: true });
+            console.log("🔄 Không còn bạn gợi ý. Đang tải lại trang...");
+            setTimeout(() => location.reload(), 3000);
             return;
           }
 
@@ -92,6 +93,94 @@ document.addEventListener("DOMContentLoaded", () => {
           scrollAndHighlight(anchor);
           processed.add(profileLink);
           anchor.click();
+
+          setTimeout(() => {
+            const timeoutFallback = setTimeout(() => {
+              console.warn("⏱ Timeout: Không lấy được thông tin. Quay lại.");
+              window.history.back();
+              setTimeout(clickNext, delay + 1000);
+            }, 10000);
+
+            try {
+              const allDivText = Array.from(document.querySelectorAll("div"))
+                .map((div) => div.innerText)
+                .filter(Boolean)
+                .join(" ")
+                .toLowerCase();
+
+              const hasValidLocation = locations.some(
+                (loc) =>
+                  allDivText.includes(`sống tại ${loc}`) ||
+                  allDivText.includes(`đến từ ${loc}`) ||
+                  allDivText.includes(loc)
+              );
+
+              let friendCount = 0;
+              let followerCount = 0;
+
+              const spanTexts = [...document.querySelectorAll("span")].map(
+                (el) => el.innerText
+              );
+
+              const friendText = spanTexts.find((text) =>
+                /\d+([.,]\d+)?[Kk]? người bạn/.test(text)
+              );
+              const followerText = spanTexts.find((text) =>
+                /\d+([.,]\d+)?[Kk]? người theo dõi/.test(text)
+              );
+
+              const parseNumber = (text) => {
+                const match = text.match(/(\d+[.,]?\d*)([Kk]?)/);
+                if (match) {
+                  let number = match[1].replace(",", ".");
+                  let result = parseFloat(number);
+                  if (match[2].toLowerCase() === "k") {
+                    result *= 1000;
+                  }
+                  return Math.round(result);
+                }
+                return 0;
+              };
+
+              if (friendText) friendCount = parseNumber(friendText);
+              if (followerText) followerCount = parseNumber(followerText);
+
+              clearTimeout(timeoutFallback);
+
+              const passFriend = friendCount >= 500;
+              const passFollower = followerCount >= 500;
+
+              if (hasValidLocation && (passFriend || passFollower)) {
+                nextButton.click();
+                count++;
+                chrome.runtime.sendMessage({ name, url: profileLink, count });
+                setTimeout(() => {
+                  window.history.back();
+                  setTimeout(clickNext, delay + 1000);
+                }, 1000);
+              } else {
+                const reasons = [];
+                if (!hasValidLocation) reasons.push("Không ở khu vực hợp lệ");
+                if (!passFriend && !passFollower)
+                  reasons.push("Dưới 500 bạn và theo dõi");
+
+                chrome.runtime.sendMessage({
+                  skipped: true,
+                  name,
+                  reason: "Bị loại: " + reasons.join(" - "),
+                });
+                setTimeout(() => {
+                  window.history.back();
+                  setTimeout(clickNext, delay + 1000);
+                }, 1000);
+              }
+            } catch (err) {
+              console.error("❌ Lỗi xử lý trang cá nhân:", err);
+              clearTimeout(timeoutFallback);
+              window.history.back();
+              setTimeout(clickNext, delay + 1000);
+            }
+          }, 2000);
 
           setTimeout(() => {
             const allDivText = Array.from(document.querySelectorAll("div"))
@@ -108,9 +197,18 @@ document.addEventListener("DOMContentLoaded", () => {
             );
 
             let friendCount = 0;
-            const friendText = [...document.querySelectorAll("span")]
-              .map((el) => el.innerText)
-              .find((text) => /\d+([.,]\d+)?[Kk]? người bạn/.test(text));
+            let followerCount = 0;
+
+            const spanTexts = [...document.querySelectorAll("span")].map(
+              (el) => el.innerText
+            );
+
+            const friendText = spanTexts.find((text) =>
+              /\d+([.,]\d+)?[Kk]? người bạn/.test(text)
+            );
+            const followerText = spanTexts.find((text) =>
+              /\d+([.,]\d+)?[Kk]? người theo dõi/.test(text)
+            );
 
             if (friendText) {
               const match = friendText.match(/(\d+[.,]?\d*)([Kk]?)/);
@@ -124,24 +222,42 @@ document.addEventListener("DOMContentLoaded", () => {
               }
             }
 
-            if (hasValidLocation && friendCount >= 500) {
+            if (followerText) {
+              const match = followerText.match(/(\d+[.,]?\d*)([Kk]?)/);
+              if (match) {
+                let number = match[1].replace(",", ".");
+                followerCount = parseFloat(number);
+                if (match[2].toLowerCase() === "k") {
+                  followerCount *= 1000;
+                }
+                followerCount = Math.round(followerCount);
+              }
+            }
+
+            clearTimeout(timeoutFallback);
+
+            const passFriend = friendCount >= 500;
+            const passFollower = followerCount >= 500;
+
+            if (hasValidLocation && (passFriend || passFollower)) {
               nextButton.click();
               count++;
               chrome.runtime.sendMessage({ name, url: profileLink, count });
-
               setTimeout(() => {
                 window.history.back();
                 setTimeout(clickNext, delay + 1000);
               }, 1000);
             } else {
+              const reasons = [];
+              if (!hasValidLocation) reasons.push("Không ở khu vực hợp lệ");
+              if (!passFriend && !passFollower)
+                reasons.push("Dưới 500 bạn và theo dõi");
+
               chrome.runtime.sendMessage({
                 skipped: true,
                 name,
-                reason: `Bị loại: ${
-                  hasValidLocation ? "" : "Không ở khu vực hợp lệ"
-                } ${friendCount < 500 ? "- Dưới 500 bạn" : ""}`.trim(),
+                reason: "Bị loại: " + reasons.join(" - "),
               });
-
               setTimeout(() => {
                 window.history.back();
                 setTimeout(clickNext, delay + 1000);
