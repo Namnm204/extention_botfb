@@ -108,12 +108,26 @@ document.addEventListener("DOMContentLoaded", () => {
                 .join(" ")
                 .toLowerCase();
 
+              const allSpanText = Array.from(document.querySelectorAll("span"))
+                .map((span) => span.innerText)
+                .filter(Boolean)
+                .join(" ")
+                .toLowerCase();
+
+              const allText = `${allDivText} ${allSpanText}`;
+
               const hasValidLocation = locations.some(
                 (loc) =>
-                  allDivText.includes(`sống tại ${loc}`) ||
-                  allDivText.includes(`đến từ ${loc}`) ||
-                  allDivText.includes(loc)
+                  allText.includes(`sống tại ${loc}`) ||
+                  allText.includes(`đến từ ${loc}`) ||
+                  allText.includes(loc)
               );
+
+              const isSingle = allText.includes("độc thân");
+              const hasRelationshipInfo =
+                /(tìm hiểu|hẹn hò|phức tạp|kết hôn|đính hôn|ly hôn|góa)/.test(
+                  allText
+                );
 
               let friendCount = 0;
               let followerCount = 0;
@@ -152,19 +166,33 @@ document.addEventListener("DOMContentLoaded", () => {
                 friendCount,
                 followerCount,
                 hasValidLocation,
+                isSingle,
               });
 
               const passFriend = friendCount >= 500;
               const passFollower = followerCount >= 500;
 
               if (hasValidLocation && (passFriend || passFollower)) {
-                nextButton.click();
-                count++;
-                chrome.runtime.sendMessage({ name, url: profileLink, count });
-                setTimeout(() => {
-                  window.history.back();
-                  setTimeout(clickNext, delay + 1000);
-                }, 1000);
+                if (isSingle || !hasRelationshipInfo) {
+                  // Gửi nếu độc thân hoặc không có thông tin
+                  nextButton.click();
+                  count++;
+                  chrome.runtime.sendMessage({ name, url: profileLink, count });
+                  setTimeout(() => {
+                    window.history.back();
+                    setTimeout(clickNext, delay + 1000);
+                  }, 1000);
+                } else {
+                  chrome.runtime.sendMessage({
+                    skipped: true,
+                    name,
+                    reason: "Bị loại: Không độc thân",
+                  });
+                  setTimeout(() => {
+                    window.history.back();
+                    setTimeout(clickNext, delay + 1000);
+                  }, 1000);
+                }
               } else {
                 const reasons = [];
                 if (!hasValidLocation) reasons.push("Không ở khu vực hợp lệ");
