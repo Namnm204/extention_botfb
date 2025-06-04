@@ -186,7 +186,7 @@ document.addEventListener("DOMContentLoaded", () => {
                   chrome.runtime.sendMessage({
                     skipped: true,
                     name,
-                    reason: "Bị loại: Không độc thân",
+                    reason: "=== Không độc thân ===",
                   });
                   setTimeout(() => {
                     window.history.back();
@@ -195,14 +195,14 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
               } else {
                 const reasons = [];
-                if (!hasValidLocation) reasons.push("Không ở khu vực hợp lệ");
+                if (!hasValidLocation) reasons.push("Sai khu vực");
                 if (!passFriend && !passFollower)
                   reasons.push("Dưới 500 bạn và theo dõi");
 
                 chrome.runtime.sendMessage({
                   skipped: true,
                   name,
-                  reason: "Bị loại: " + reasons.join(" - "),
+                  reason: "=== " + reasons.join(" - ") + " ===",
                 });
                 setTimeout(() => {
                   window.history.back();
@@ -225,7 +225,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   document.getElementById("stop").addEventListener("click", async () => {
     isRunning = false;
-    log("⛔ Đã yêu cầu dừng.");
+    log("⛔ Đã dừng.");
     let [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
 
     chrome.scripting.executeScript({
@@ -249,25 +249,25 @@ function log(message) {
 
 function updateCounts() {
   if (sentCountDisplay) {
-    sentCountDisplay.textContent = `Tổng số lời mời đã gửi: ${sentCount}`;
+    sentCountDisplay.textContent = `Đã gửi: ${sentCount}`;
   }
   if (skippedCountDisplay) {
-    skippedCountDisplay.textContent = `Tổng số người bị loại: ${skippedCount}`;
+    skippedCountDisplay.textContent = `Bị loại: ${skippedCount}`;
   }
 }
 
 chrome.runtime.onMessage.addListener((message) => {
   if (message.done) {
-    log("✅ Đã hoàn thành gửi lời mời.");
+    log("✅ Đã gửi lời mời.");
   } else if (message.name && message.url) {
     sentCount++;
     updateCounts();
     log(
-      `✅ Đã gửi lời mời kết bạn cho <a href="${message.url}" target="_blank">${message.name}</a>`
+      `✅ Đã kết bạn với <a href="${message.url}" target="_blank" style="color:lime">${message.name}</a>`
     );
   } else if (message.skipped) {
     skippedCount++;
     updateCounts();
-    log(`⚠️ Bỏ qua ${message.name}: ${message.reason}`);
+    log(`⚠️ ${message.name}: ${message.reason}`);
   }
 });

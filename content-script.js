@@ -22,7 +22,15 @@ function log(message) {
 
   const now = new Date().toLocaleTimeString();
   const item = document.createElement("div");
-  item.innerHTML = `<strong>[${now}]</strong> ${message}`;
+  const match = message.match(/⚠️\s*(.+?):\s*===\s*(.+?)\s*===/);
+
+  if (match) {
+    name = match[1];
+    reason = match[2];
+  }
+
+  item.innerHTML = `<strong>[${now}]</strong> <br> ${name}<br> ${reason}`;
+
   item.style.cssText = `
     background: rgba(0, 0, 0, 0.85);
     color: #fff;
