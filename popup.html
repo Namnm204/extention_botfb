@@ -8,11 +8,38 @@
         font-family: sans-serif;
         padding: 10px;
         width: 300px;
+        overflow: hidden;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+        font-size: 18px; /* <-- Tăng cỡ chữ toàn bộ */
+      }
+
+      .title {
+        text-align: center;
+        font-size: 26px; /* <-- Tăng size tiêu đề */
+        margin-top: 0;
+        margin-bottom: 15px;
+      }
+
+      input,
+      button {
+        font-size: 16px; /* <-- Cỡ chữ nút và input */
+        padding: 5px;
+      }
+
+      label {
+        margin-right: 10px;
+      }
+
+      ::-webkit-scrollbar {
+        width: 0px;
+        height: 0px;
+        display: none;
       }
     </style>
   </head>
   <body>
-    <h3>Tự động kết bạn</h3>
+    <h3 class="title">Tự động kết bạn</h3>
 
     <p>Ngưỡng chạy mỗi ngày:</p>
     <div>
@@ -26,7 +53,7 @@
     <input type="number" id="delay" value="1" min="1" step="1" />
     <br /><br />
 
-    <label>Chỉ kết bạn nếu ở khu vực (phân cách bằng dấu phẩy):</label>
+    <label>Khu vực:</label>
     <input
       type="text"
       id="locations"

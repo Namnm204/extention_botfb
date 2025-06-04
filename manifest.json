@@ -6,7 +6,8 @@
   "permissions": ["scripting", "activeTab"],
   "host_permissions": ["https://www.facebook.com/*"],
   "action": {
-    "default_popup": "popup.html"
+    "default_title": "Tự động kết bạn",
+    "default_icon": "icon.png"
   },
   "background": {
     "service_worker": "background.js"
@@ -16,6 +17,12 @@
       "matches": ["<all_urls>"],
       "js": ["content-script.js"],
       "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["popup.html", "popup.js", "popup.css"],
+      "matches": ["<all_urls>"]
     }
   ]
 }
