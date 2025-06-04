@@ -94,13 +94,13 @@ document.addEventListener("DOMContentLoaded", () => {
           processed.add(profileLink);
           anchor.click();
 
-          setTimeout(() => {
-            const timeoutFallback = setTimeout(() => {
-              console.warn("⏱ Timeout: Không lấy được thông tin. Quay lại.");
-              window.history.back();
-              setTimeout(clickNext, delay + 1000);
-            }, 10000);
+          const timeoutFallback = setTimeout(() => {
+            console.warn("⏱ Timeout: Không lấy được thông tin. Quay lại.");
+            window.history.back();
+            setTimeout(clickNext, delay + 1000);
+          }, 10000);
 
+          setTimeout(() => {
             try {
               const allDivText = Array.from(document.querySelectorAll("div"))
                 .map((div) => div.innerText)
@@ -147,6 +147,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
               clearTimeout(timeoutFallback);
 
+              console.log("🕵️ Đang kiểm tra:", {
+                name,
+                friendCount,
+                followerCount,
+                hasValidLocation,
+              });
+
               const passFriend = friendCount >= 500;
               const passFollower = followerCount >= 500;
 
@@ -179,89 +186,6 @@ document.addEventListener("DOMContentLoaded", () => {
               clearTimeout(timeoutFallback);
               window.history.back();
               setTimeout(clickNext, delay + 1000);
-            }
-          }, 2000);
-
-          setTimeout(() => {
-            const allDivText = Array.from(document.querySelectorAll("div"))
-              .map((div) => div.innerText)
-              .filter(Boolean)
-              .join(" ")
-              .toLowerCase();
-
-            const hasValidLocation = locations.some(
-              (loc) =>
-                allDivText.includes(`sống tại ${loc}`) ||
-                allDivText.includes(`đến từ ${loc}`) ||
-                allDivText.includes(loc)
-            );
-
-            let friendCount = 0;
-            let followerCount = 0;
-
-            const spanTexts = [...document.querySelectorAll("span")].map(
-              (el) => el.innerText
-            );
-
-            const friendText = spanTexts.find((text) =>
-              /\d+([.,]\d+)?[Kk]? người bạn/.test(text)
-            );
-            const followerText = spanTexts.find((text) =>
-              /\d+([.,]\d+)?[Kk]? người theo dõi/.test(text)
-            );
-
-            if (friendText) {
-              const match = friendText.match(/(\d+[.,]?\d*)([Kk]?)/);
-              if (match) {
-                let number = match[1].replace(",", ".");
-                friendCount = parseFloat(number);
-                if (match[2].toLowerCase() === "k") {
-                  friendCount *= 1000;
-                }
-                friendCount = Math.round(friendCount);
-              }
-            }
-
-            if (followerText) {
-              const match = followerText.match(/(\d+[.,]?\d*)([Kk]?)/);
-              if (match) {
-                let number = match[1].replace(",", ".");
-                followerCount = parseFloat(number);
-                if (match[2].toLowerCase() === "k") {
-                  followerCount *= 1000;
-                }
-                followerCount = Math.round(followerCount);
-              }
-            }
-
-            clearTimeout(timeoutFallback);
-
-            const passFriend = friendCount >= 500;
-            const passFollower = followerCount >= 500;
-
-            if (hasValidLocation && (passFriend || passFollower)) {
-              nextButton.click();
-              count++;
-              chrome.runtime.sendMessage({ name, url: profileLink, count });
-              setTimeout(() => {
-                window.history.back();
-                setTimeout(clickNext, delay + 1000);
-              }, 1000);
-            } else {
-              const reasons = [];
-              if (!hasValidLocation) reasons.push("Không ở khu vực hợp lệ");
-              if (!passFriend && !passFollower)
-                reasons.push("Dưới 500 bạn và theo dõi");
-
-              chrome.runtime.sendMessage({
-                skipped: true,
-                name,
-                reason: "Bị loại: " + reasons.join(" - "),
-              });
-              setTimeout(() => {
-                window.history.back();
-                setTimeout(clickNext, delay + 1000);
-              }, 1000);
             }
           }, 2000);
         };
