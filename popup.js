@@ -238,9 +238,13 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 function log(message) {
-  const now = new Date().toLocaleTimeString();
-  logBox.innerHTML += `[${now}] ${message}<br />`;
-  logBox.scrollTop = logBox.scrollHeight;
+  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    if (tabs.length === 0) return;
+    chrome.tabs.sendMessage(tabs[0].id, {
+      type: "log",
+      message: message,
+    });
+  });
 }
 
 function updateCounts() {

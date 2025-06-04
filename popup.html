@@ -9,14 +9,6 @@
         padding: 10px;
         width: 300px;
       }
-      #log {
-        height: 150px;
-        overflow-y: auto;
-        font-size: 12px;
-        border: 1px solid #ccc;
-        padding: 5px;
-        margin-top: 10px;
-      }
     </style>
   </head>
   <body>
@@ -27,15 +19,11 @@
       <label><input type="radio" name="limit" value="2" /> 2</label>
       <label><input type="radio" name="limit" value="50" /> 50</label>
       <label><input type="radio" name="limit" value="100" /> 100</label>
-      <label><input type="radio" name="limit" value="200" /> 200</label>
-      <label
-        ><input type="radio" name="limit" value="Infinity" /> Không giới
-        hạn</label
-      >
+      <label><input type="radio" name="limit" value="200" checked /> 200</label>
     </div>
 
     <label>Delay mỗi lần gửi (giây):</label>
-    <input type="number" id="delay" value="2" min="1" step="1" />
+    <input type="number" id="delay" value="1" min="1" step="1" />
     <br /><br />
 
     <label>Chỉ kết bạn nếu ở khu vực (phân cách bằng dấu phẩy):</label>
@@ -52,8 +40,6 @@
 
     <p id="sent-count">Tổng số lời mời đã gửi: 0</p>
     <p id="skipped-count">Tổng số người bị loại: 0</p>
-
-    <div id="log"></div>
 
     <script src="popup.js"></script>
   </body>
